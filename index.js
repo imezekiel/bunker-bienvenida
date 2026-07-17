@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits } = require('discord.js'); // <-- Añadido PermissionFlagsBits para seguridad
 
 const client = new Client({
     intents: [
@@ -20,7 +20,7 @@ function obtenerEntradaDiarioAleatoria(usuario, guild, channelMention) {
     const bannerGif = 'https://i.postimg.cc/J4Pky6gZ/descarga.gif'; // Tu GIF personalizado
 
     // Definimos una lista con entradas más cortas y enfocadas en "bichos" específicos
-    const entradas = [
+    const entries = [
         // 1. Demonio de Ojos Negros
         new EmbedBuilder()
             .setColor('#701c1c') // Rojo Oscuro
@@ -63,8 +63,8 @@ function obtenerEntradaDiarioAleatoria(usuario, guild, channelMention) {
     ];
 
     // Selecciona un número al azar entre 0 y el total de entradas que creamos
-    const indiceAleatorio = Math.floor(Math.random() * entradas.length);
-    const embedSeleccionado = entradas[indiceAleatorio];
+    const indiceAleatorio = Math.floor(Math.random() * entries.length);
+    const embedSeleccionado = entries[indiceAleatorio];
 
     // Pie de página común
     embedSeleccionado.setFooter({ 
@@ -94,10 +94,11 @@ client.on('guildMemberAdd', async (member) => {
     });
 });
 
-// --- EVENTO 2: Comando de prueba manual (!probar) ---
+// --- EVENTO 2: Manejo de comandos manuales ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    // --- COMANDO 1: !probar ---
     if (message.content === '!probar') {
         const channel = message.guild.channels.cache.get(process.env.WELCOME_CHANNEL_ID);
         if (!channel) return message.reply("❌ No se encontró el canal de bienvenida. Revisa tu archivo .env");
@@ -112,6 +113,36 @@ client.on('messageCreate', async (message) => {
             embeds: [resultado.embed] 
         });
         message.reply(`✅ ¡Prueba enviada! Se seleccionó al azar la **Entrada #${resultado.numeroEntrada}**.`);
+    }
+
+    // --- COMANDO 2: !clean [número] ---
+    if (message.content.startsWith('!clean')) {
+        // Verificar si el usuario tiene permisos para borrar mensajes
+        if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+            return message.reply("⛔ No tienes los permisos necesarios (Gestionar Mensajes) para usar este comando en el búnker.");
+        }
+
+        // Dividir el mensaje para obtener el número (Ej: "!clean 10" -> "10")
+        const args = message.content.split(' ');
+        const cantidad = parseInt(args[1]);
+
+        // Verificar que sea un número válido entre 1 y 99
+        if (isNaN(cantidad) || cantidad < 1 || cantidad > 99) {
+            return message.reply("🧹 Debes indicar cuántos mensajes borrar entre 1 y 99. Ejemplo: `!clean 10`");
+        }
+
+        try {
+            // Borramos la cantidad indicada + 1 (para borrar también el comando "!clean" que escribiste)
+            const mensajesBorrados = await message.channel.bulkDelete(cantidad + 1, true);
+            
+            // Envía un mensaje temporal avisando cuántos borró y lo elimina a los 3 segundos para no ensuciar
+            const aviso = await message.channel.send(`🧹 ¡Purificación completa! Se han eliminado **${mensajesBorrados.size - 1}** mensajes del chat.`);
+            setTimeout(() => aviso.delete().catch(() => null), 3000);
+            
+        } catch (error) {
+            console.error(error);
+            message.reply("❌ Ocurrió un error al intentar borrar los mensajes. Nota: Discord no permite borrar mensajes con más de 14 días de antigüedad.");
+        }
     }
 });
 
