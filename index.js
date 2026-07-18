@@ -1,6 +1,14 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
+// ==========================================
+// 🌐 SERVIDOR WEB PARA UPTIMEROBOT (OPCIÓN 2)
+// ==========================================
+const express = require('express');
+const app = express();
+app.get('/', (req, res) => res.send('🤖 ¡El Diario de John está online y protegido!'));
+app.listen(process.env.PORT || 3000, () => console.log('✅ Servidor web listo para recibir pings de UptimeRobot.'));
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
